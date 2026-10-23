@@ -1,19 +1,16 @@
-
-
 # Build the shared dashboard frame around the tab module UIs.
 
 #' @param tas_ui UI for the "TAS Accelertaor" tab 
-
 #' @param sequence_ui UI for the "Sequence Generator" tab
-
-
-#' @return A 'shinydashboard::dashboardPage()' used for a Shiny app
+#' @param qc_upload_ui UI for QC data upload and processing
+#' @param qc_report_ui UI for QC plots and report download
 #' 
+#' @return A 'shinydashboard::dashboardPage()' used for a Shiny app
 #' @importFrom shiny HTML
 #' @export
 
-dashboard_shell <- function(tas_ui, sequence_ui) {
-  shinydashboard::dashboardPae(
+dashboard_shell <- function(tas_ui, sequence_ui, qc_upload_ui = NULL, qc_report_ui = NULL) {
+  shinydashboard::dashboardPage(
     shinydashboard::dashboardHeader(
       title = shiny::tags$span(
         shiny::tags$img(
@@ -36,6 +33,25 @@ dashboard_shell <- function(tas_ui, sequence_ui) {
           "Sequence Generator",
           tabName = "plate_tab",
           icon = shiny::icon("th")
+        ),
+        # Parent menu: Quality Control
+        shinydashboard::menuItem(
+          "Quality Control",
+          icon = shiny::icon("bar-chart"),
+
+          # Child tab 1
+          shinydashboard::menuSubItem(
+            "Data Upload",
+            tabName = "qc_upload",
+            icon = shiny::icon("upload")
+          ),
+
+          # Child tab 2
+          shinydashboard::menuSubItem(
+            "QC Report",
+            tabName = "qc_report",
+            icon = shiny::icon("file-pdf")
+          )
         )
       )
     ),
@@ -86,7 +102,9 @@ dashboard_shell <- function(tas_ui, sequence_ui) {
       ")),
       shinydashboard::tabItems(
         shinydashboard::tabItem(tabName = "acquired_tab", tas_ui),
-        shinydashboard::tabItem(tabName = "plate_tab", sequence_ui)
+        shinydashboard::tabItem(tabName = "plate_tab", sequence_ui),
+        shinydashboard::tabItem(tabName = "qc_upload", qc_upload_ui),
+        shinydashboard::tabItem(tabName = "qc_report", qc_report_ui)
       )
     )
   )

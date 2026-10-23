@@ -8,6 +8,8 @@ Authors@R: c(person('Ian', 'Lacroix', email = 'ian.lacroix@nih.gov',
 Description: Utility package with tools for autmoation of MetLip workflows.
 License: MIT + file LICENSE
 Depends: R (>= 4.4)
+Remotes:
+  Hood-BIFX/qcdrift
 Imports:
   dplyr,
   httr,
@@ -15,6 +17,7 @@ Imports:
   lubridate,
   magrittr,
   purrr,
+  qcdrift
   stringr,
   tidyr,
   writexl,
