@@ -10,6 +10,15 @@ library(writexl)
 library(readxl)
 library(zip)
 library(sortable)
+library(qcdrift)
+
+find_plots <- function(x) {
+  if (inherits(x, "ggplot")) return(list(x))
+  if (is.list(x) && !is.data.frame(x)) return(unlist(lapply(x, find_plots), 
+  recursive = FALSE))
+  NULL
+}
+
 
 if (FALSE)
   devtools::install_github("IDSS-NIAID/MetLip-FrontEnd-Automation")
@@ -108,11 +117,14 @@ ui <- dashboardPage(
     titleWidth = 400
   ),
   dashboardSidebar(
-    sidebarMenu(
-      menuItem("TAS Accelerator", tabName = "acquired_tab", icon = icon("cogs")),
-      menuItem("Sequence Generator",  tabName = "plate_tab",    icon = icon("th"))
-    )
-  ),
+  sidebarMenu(
+  id = "tabs",
+  menuItem("TAS Accelerator",    tabName = "acquired_tab",  icon = icon("cogs")),
+  menuItem("Sequence Generator", tabName = "plate_tab",     icon = icon("th")),
+  menuItem("Data Upload",        tabName = "qc_upload_tab", icon = icon("upload")),
+  menuItem("QC Report",          tabName = "qc_report_tab", icon = icon("line-chart"))
+ )
+),
   dashboardBody(
     useShinyjs(),
     tags$style(HTML("
@@ -380,7 +392,7 @@ ui <- dashboardPage(
                                   ))
               )),
               
-              # Download
+                         # Download
               shinyjs::hidden(div(id = "download_section",
                                   fluidRow(box(
                                     title = "Download", width = 12,
@@ -389,6 +401,41 @@ ui <- dashboardPage(
                                     downloadButton("download_all_zip", "Download",
                                                    icon = icon("download"), class = "btn-primary")
                                   ))
+              ))
+      ),
+
+      # Data Upload
+      tabItem(tabName = "qc_upload_tab",
+              fluidRow(box(
+                title = "Data Upload", width = 12,
+                fileInput("qc_file", "Raw mass spec file (.xlsx):", accept = ".xlsx"),
+                fluidRow(
+                  column(3, actionButton("qc_process_btn", "Process with qcdrift",
+                                         icon = icon("cogs"),
+                                         class = "btn-primary btn-block")),
+                  column(9, uiOutput("qc_status"))
+                )
+              ))
+      ),
+
+      # QC Report
+      tabItem(tabName = "qc_report_tab",
+              div(id = "qc_report_empty",
+                  p("Upload and process a file on the Data Upload tab.")),
+              shinyjs::hidden(div(id = "qc_report_section",
+                fluidRow(box(
+                  title = "QC Report", width = 12,
+                  downloadButton("qc_report_download", "Download Report",
+                                 icon = icon("download"), class = "btn-primary")
+                )),
+                fluidRow(
+                  box(title = "PCA",     width = 6, plotOutput("qc_fig1")),
+                  box(title = "CV",      width = 6, plotOutput("qc_fig2"))
+                ),
+                fluidRow(
+                  box(title = "Violin",  width = 6, plotOutput("qc_fig3")),
+                  box(title = "Heatmap", width = 6, plotOutput("qc_fig4"))
+                )
               ))
       )
     )
@@ -415,7 +462,8 @@ server <- function(input, output, session) {
     ms_methods_detected = character(),
     seq_dir          = NULL,
     seq_paths        = NULL,
-    level_orders     = list()
+    level_orders     = list(),
+    qc_figs          = NULL
   )
   
   matrix_assignments <- reactiveVal(
@@ -1260,6 +1308,65 @@ server <- function(input, output, session) {
     },
     contentType = "application/zip"
   )
+    # TAB 3 & 4: qcdrift upload + QC report
+  observeEvent(input$qc_process_btn, {
+    if (is.null(input$qc_file)) {
+      showNotification("Upload a file first.", type = "warning"); return()
+    }
+    output$qc_status <- renderUI(tags$p("Processing...", class = "status-msg"))
+
+    figs <- tryCatch({
+      figs <- find_plots(qcdrift::process_runs(input$qc_file$datapath))
+      if (length(figs) < 4) stop("Expected 4 figures, found ", length(figs))
+      figs[1:4]
+    }, error = function(e) {
+      output$qc_status <- renderUI(
+        tags$p(paste("qcdrift failed:", conditionMessage(e)), class = "status-msg error"))
+      NULL
+    })
+    if (is.null(figs)) return()
+
+    rv$qc_figs <- figs
+    output$qc_status <- renderUI(
+      tags$p("Processed with qcdrift.", class = "status-msg success"))
+    shinyjs::hide("qc_report_empty")
+    shinyjs::show("qc_report_section")
+    updateTabItems(session, "tabs", "qc_report_tab")
+  })
+
+  for (i in 1:4) local({
+    k <- i
+    output[[paste0("qc_fig", k)]] <- renderPlot({
+      req(rv$qc_figs)
+      rv$qc_figs[[k]]
+    })
+  })
+
+    output$qc_report_download <- downloadHandler(
+    filename = function() paste0("QC_report_", Sys.Date(), ".pdf"),
+    content = function(file) {
+      req(rv$qc_figs)
+      pdf(file, width = 10, height = 7)
+      on.exit(dev.off())
+      for (p in rv$qc_figs) print(p)
+    }
+  )
+
+  # Preview of the File
+  observeEvent(input$qc_file, {
+    preview <- read_excel(input$qc_file$datapath, col_names = FALSE, n_max = 100)
+
+    output$qc_preview_table <- renderDT({
+      datatable(preview, options = list(scrollX = TRUE))
+    })
+
+    showModal(modalDialog(
+      title = "File Preview",
+      DTOutput("qc_preview_table"),
+      size = "l",
+      easyClose = TRUE
+    ))
+  })
 }
 
 shinyApp(ui, server)
