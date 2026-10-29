@@ -1,6 +1,15 @@
+#' sequence_generator_ui
+#' UI elements for the sequence generator tab
+#' 
+#' @param id NS session id
+#' 
+#' @return Shiny UI element
+#' @importFrom shiny actionButton br checkboxInput column downloadButton fileInput fluidRow h4 icon numericInput p radioButtons selectInput strong textInput uiOutput
+#' @importFrom shinydashboard box tabItem
+#' @importFrom DT DTOutput
 sequence_generator_ui <- function(id) {
   ns <- shiny::NS(id)
-  tabItem(tabName = "plate_tab",
+      tabItem(tabName = "plate_tab",
               
               # Data source
               fluidRow(box(
@@ -150,7 +159,7 @@ sequence_generator_ui <- function(id) {
                                     ),
                                     br(),
                                     fluidRow(
-                                      column(4, numericInput(ns("injection_vol"), "Injection Volume (µL):",
+                                      column(4, numericInput(ns("injection_vol"), "Injection Volume (\u03bcL):",
                                                              value = 5, min = 2, max = 20, step = 0.5)),
                                       column(4, br(), actionButton(ns("generate_seq_btn"), "Generate Sequence",
                                                                    icon = icon("coffee"), class = "btn-warning")),
@@ -172,29 +181,36 @@ sequence_generator_ui <- function(id) {
       )
 }
 
-sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
+#' sequence_generator_server
+#' Server function for sequence generator tab
+#' 
+#' @param id NS id of the session
+#' @param app_state Current app state
+#' 
+#' @importFrom dplyr count
+#' @importFrom shiny actionButton br checkboxGroupInput column div downloadHandler fluidRow observe observeEvent renderUI req tagList textInput showNotification updateSelectInput updateTextInput
+#' @importFrom DT datatable renderDT
+#' @importFrom readxl read_excel
+#' @importFrom rlang .data
+#' @importFrom sortable rank_list
+#' @importFrom zip zipr
+sequence_generator_server <- function(id, app_state) {
   shiny::moduleServer(id, function(input, output, session) {
     rv <- shiny::reactiveValues(
-      df_source = NULL,
-      plate_id_col = NULL,
-      parsed_cols = character(),
-      df_validated = NULL,
-      plate_results = NULL,
-      ms_methods_detected = character(),
-      seq_dir = NULL,
-      seq_paths = NULL,
+      df_source = NULL, plate_id_col = NULL, parsed_cols = character(),
+      df_validated = NULL, plate_results = NULL,
+      ms_methods_detected = character(), seq_dir = NULL, seq_paths = NULL,
       level_orders = list()
     )
-
     matrix_assignments <- shiny::reactiveVal(
-      data.frame(Matrix = character(0), FirstID = character(0),
-                 LastID = character(0), stringsAsFactors = FALSE)
+      data.frame(Matrix = character(), FirstID = character(), LastID = character(), stringsAsFactors = FALSE)
     )
     selection_mode <- shiny::reactiveVal("idle")
-
+  # TAB 2: Plate & Sequence
+  
   observeEvent(input$data_source, {
-    if (input$data_source == "upload") shinyjs::show(session$ns("upload_panel"))
-    else                               shinyjs::hide(session$ns("upload_panel"))
+    if (input$data_source == "upload") shinyjs::show("upload_panel")
+    else                               shinyjs::hide("upload_panel")
   })
   
   output$plate_project_id_ui <- renderUI({
@@ -202,10 +218,10 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
     if (input$data_source == "upload") {
       textInput(session$ns("plate_project_id"), "Project ID:",
                 placeholder = "e.g. yeboahr2-20260108-ML1")
-    } else if (input$data_source == "tas" && !is.null(tas_samples()$request_id)) {
+    } else if (input$data_source == "tas" && !is.null(app_state$request_id)) {
       tagList(
         tags$label("Project ID:"),
-        tags$p(tas_samples()$request_id,
+        tags$p(app_state$request_id,
                style = "font-weight: bold; font-size: 14px; margin-top: 4px;")
       )
     } else {
@@ -215,14 +231,14 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
   
   observeEvent(input$load_source_btn, {
     if (input$data_source == "tas") {
-      if (is.null(tas_samples()$df_confirmed)) {
+      if (is.null(app_state$df_confirmed)) {
         showNotification(
           "No TAS data available. Please complete the Acquired Samples workflow first.",
           type = "warning"); return()
       }
-      rv$df_source <- tas_samples()$df_confirmed
+      rv$df_source <- app_state$df_confirmed
       output$source_status <- renderUI(
-        tags$p(paste0("Loaded ", nrow(tas_samples()$df_confirmed),
+        tags$p(paste0("Loaded ", nrow(app_state$df_confirmed),
                       " rows from TAS Acquired Samples tab."),
                class = "status-msg success")
       )
@@ -250,7 +266,7 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
       )
     }
     
-    rv$plate_id_col <- detect_sub_id_col(rv$df_source)
+    rv$plate_id_col <- detect_submitted_sample_id_column(rv$df_source)
     
     # Detect parsed/extra columns beyond the standard TAS columns
     standard_cols <- c("Acquired Sample ID", "Acquired Sample Name",
@@ -266,11 +282,11 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
     matrix_assignments(data.frame(Matrix = character(0), FirstID = character(0),
                                   LastID = character(0), stringsAsFactors = FALSE))
     
-    shinyjs::show(session$ns("reference_section"))
-    shinyjs::show(session$ns("matrix_section"))
-    shinyjs::hide(session$ns("validation_section"))
-    shinyjs::hide(session$ns("plate_section"))
-    shinyjs::hide(session$ns("download_section"))
+    shinyjs::show("reference_section")
+    shinyjs::show("matrix_section")
+    shinyjs::hide("validation_section")
+    shinyjs::hide("plate_section")
+    shinyjs::hide("download_section")
   })
   
   output$reference_table <- renderDT({
@@ -283,18 +299,18 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
   
   observeEvent(input$multi_matrix, {
     if (isTRUE(input$multi_matrix)) {
-      shinyjs::show(session$ns("multi_matrix_panel"))
-      shinyjs::hide(session$ns("single_matrix_panel"))
+      shinyjs::show("multi_matrix_panel")
+      shinyjs::hide("single_matrix_panel")
     } else {
-      shinyjs::hide(session$ns("multi_matrix_panel"))
-      shinyjs::show(session$ns("single_matrix_panel"))
+      shinyjs::hide("multi_matrix_panel")
+      shinyjs::show("single_matrix_panel")
       selection_mode("idle")
     }
   })
   
   observe({
-    shinyjs::disable(session$ns("new_first_id"))
-    shinyjs::disable(session$ns("new_last_id"))
+    shinyjs::disable("new_first_id")
+    shinyjs::disable("new_last_id")
   })
   
   observeEvent(input$reset_selection_btn, {
@@ -372,7 +388,7 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
                tags$tbody(lapply(seq_len(nrow(ma)), function(i) {
                  tags$tr(
                    tags$td(ma$Matrix[i]), tags$td(ma$FirstID[i]), tags$td(ma$LastID[i]),
-                   tags$td(tags$button("✕", class = "btn btn-danger btn-xs",
+                   tags$td(tags$button("\u2715", class = "btn btn-danger btn-xs",
                                        onclick = paste0("Shiny.setInputValue('", session$ns("remove_matrix"), "', ", i,
                                                         ", {priority: 'event'})")))
                  )
@@ -384,8 +400,8 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
     req(rv$df_source)
     
     project_id <- if (!is.null(input$data_source) && input$data_source == "tas" &&
-                      !is.null(tas_samples()$request_id)) {
-      tas_samples()$request_id
+                      !is.null(app_state$request_id)) {
+      app_state$request_id
     } else {
       trimws(input$plate_project_id)
     }
@@ -457,22 +473,22 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
       datatable(df %>% select(all_of(preview_cols)),
                 options = list(scrollX = TRUE), rownames = FALSE)
     )
-    shinyjs::show(session$ns("validation_section"))
-    shinyjs::hide(session$ns("plate_section"))
-    shinyjs::hide(session$ns("download_section"))
+    shinyjs::show("validation_section")
+    shinyjs::hide("plate_section")
+    shinyjs::hide("download_section")
   })
   
   
   # Hide grouping + level-order controls when No Randomization is selected
   observeEvent(input$no_randomize, {
     if (isTRUE(input$no_randomize)) {
-      shinyjs::hide(session$ns("grouping_controls"))
-      shinyjs::hide(session$ns("level_order_ui"))
-      shinyjs::hide(session$ns("level_order_status"))
+      shinyjs::hide("grouping_controls")
+      shinyjs::hide("level_order_ui")
+      shinyjs::hide("level_order_status")
     } else {
-      shinyjs::show(session$ns("grouping_controls"))
-      shinyjs::show(session$ns("level_order_ui"))
-      shinyjs::show(session$ns("level_order_status"))
+      shinyjs::show("grouping_controls")
+      shinyjs::show("level_order_ui")
+      shinyjs::show("level_order_status")
     }
   }, ignoreInit = TRUE)
   
@@ -580,7 +596,7 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
     req(rv$df_validated)
     
     plate_meta <- tryCatch(
-      MetLipAutomation::generate_plate_meta_data(rv$df_validated, randomize = FALSE),
+      generate_plate_meta_data(rv$df_validated, randomize = FALSE),
       error = function(e) {
         showNotification(paste("Plate generation failed:", e$message), type = "error"); NULL
       }
@@ -588,7 +604,7 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
     if (is.null(plate_meta)) return()
     
     processed <- tryCatch(
-      MetLipAutomation::process_plate_data(plate_meta, rv$df_validated),
+      process_plate_data(plate_meta, rv$df_validated),
       error = function(e) {
         showNotification(paste("Plate processing failed:", e$message), type = "error"); NULL
       }
@@ -669,8 +685,8 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
     ms_present <- ms_present[!is.na(ms_present)]
     rv$ms_methods_detected <- ms_present
     
-    shinyjs::show(session$ns("plate_section"))
-    shinyjs::hide(session$ns("download_section"))
+    shinyjs::show("plate_section")
+    shinyjs::hide("download_section")
     showNotification("Plate meta data generated.", type = "message")
   })
   
@@ -739,7 +755,7 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
     dir.create(td, recursive = TRUE)
     
     paths <- tryCatch(
-      MetLipAutomation::generate_sequence(
+      generate_sequence(
         rv$plate_results$plate_loading,
         rv$plate_results$qc_plate_data,
         rv$plate_results$blank_plate_data,
@@ -771,7 +787,7 @@ sequence_generator_server <- function(id, tas_samples, detect_sub_id_col) {
                 icon("check-circle"),
                 paste(length(paths), "sequence file(s) ready."))
     )
-    shinyjs::show(session$ns("download_section"))
+    shinyjs::show("download_section")
     showNotification(paste("Generated", length(paths), "sequence file(s)."),
                      type = "message")
   })

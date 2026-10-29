@@ -5,7 +5,7 @@
 The repository contains:
 
 | Path | Purpose |
-|-----------------------------------|------------------------------------|
+|------------------------------------|------------------------------------|
 | `R/` | Reusable package functions for metadata, plate, and sequence generation. |
 | `RShiny/MetLip_FrontEnd_shiny_dashboard.R` | The current two-tab Shiny dashboard. |
 | `RShiny/www/logo.png` | Dashboard branding asset. |
@@ -17,27 +17,18 @@ The repository contains:
 The package requires **R 4.4 or later**. Install the package and the dashboard dependencies from an R session:
 
 ``` r
-install.packages(c(
-  "devtools", "shiny", "shinydashboard", "jose", "httr", "jsonlite",
-  "DT", "shinyjs", "dplyr", "writexl", "readxl", "zip", "sortable"
-))
-
-devtools::install_github("IDSS-NIAID/MetLip-FrontEnd-Automation")
+pak::pak("IDSS-NIAID/MetLip-FrontEnd-Automation")
 ```
 
 For local development from a cloned repository, use `devtools::load_all(".")` instead of installing from GitHub.
 
 ### Run the dashboard
 
-From the repository root, load the dashboard script and pass its returned application object to Shiny:
+The dashboard can be loaded as follows (the package must either be installed as described above or you can run `devtools::load_all()` if you want to load the active development version):
 
 ``` r
-devtools::load_all(".")
-app <- source("RShiny/MetLip_FrontEnd_shiny_dashboard.R", echo = FALSE)$value
-shiny::runApp(app)
+MetLipAutomation::load_MetLip_FrontEnd()
 ```
-
-The dashboard expects `RShiny/www/logo.png` to remain alongside the script.
 
 ### TAS access
 
@@ -70,20 +61,20 @@ The upload includes the acquired sample name, submitted sample ID, and `Notes` f
 This tab creates plate-loading files and run sequences.
 
 1.  Choose the data source:
-    -   **Use acquired samples directly from the TAS Accelerator tab** uses the confirmed TAS workbook from the current session.
-    -   **Upload Excel file** accepts `.xlsx` or `.xls` acquired-sample workbooks. Supply a project ID when uploading. The app removes a trailing `(blank if new)` from column headers automatically.
+    - **Use acquired samples directly from the TAS Accelerator tab** uses the confirmed TAS workbook from the current session.
+    - **Upload Excel file** accepts `.xlsx` or `.xls` acquired-sample workbooks. Supply a project ID when uploading. The app removes a trailing `(blank if new)` from column headers automatically.
 2.  Select **Load Data**. Uploaded files must include a supported submitted-sample ID column, `Acquired Sample ID`, `Acquired Sample Name`, and `Notes`.
 3.  Assign sample matrix/matrices:
-    -   For one matrix, enter its name.
-    -   For multiple matrices, enter each matrix name, choose **Select Sample Range**, then click the first and last sample in the reference table and add the range. Ranges follow the displayed submitted-sample order.
+    - For one matrix, enter its name.
+    - For multiple matrices, enter each matrix name, choose **Select Sample Range**, then click the first and last sample in the reference table and add the range. Ranges follow the displayed submitted-sample order.
 4.  Select **Validate & Preview**. The app adds `Project_ID`, `Acquired_Sample_ID`, and processing date fields. It derives `MS_method` from the text following the final underscore in each acquired sample name.
 5.  Choose randomization behavior:
-    -   **No Randomization** preserves plate-loading order.
-    -   Otherwise, optionally select uploaded extra columns as grouping variables. The app randomizes group order and randomizes samples within each group. You can drag level tiles into a fixed order and select **Save Order**; unspecified variables and levels retain randomized ordering.
+    - **No Randomization** preserves plate-loading order.
+    - Otherwise, optionally select uploaded extra columns as grouping variables. The app randomizes group order and randomizes samples within each group. You can drag level tiles into a fixed order and select **Save Order**; unspecified variables and levels retain randomized ordering.
 6.  Select **Generate Plate Meta Data**. Review each matrix's plate loading table, provide LC and full SciexOS MS method names, and configure QC/blank plate and vial locations, injection volume, and the QC/blank interval.
 7.  Select **Generate Sequence**, then **Download**. The ZIP contains:
-    -   `plate_data/`: one CSV and one Excel plate-loading file per matrix.
-    -   `sequences/`: CSV sequence files, one per MS method, matrix, and batch.
+    - `plate_data/`: one CSV and one Excel plate-loading file per matrix.
+    - `sequences/`: CSV sequence files, one per MS method, matrix, and batch.
 
 Sequence files begin with four blanks, then one QC and one blank; insert a QC and blank between sample chunks at the selected interval; and end with one QC and one blank. Default QC and blank locations are plate 3, vials 53 and 54, respectively; the dashboard exposes them as editable inputs.
 
@@ -135,11 +126,11 @@ generate_sequence(
 
 ## Data and output conventions
 
--   `generate_plate_meta_data()` uses 54 positions per plate, one blank per batch, one QC per matrix, and three plates per batch unless its parameters are changed.
--   Plate assignment deduplicates by `Matrix` and `Submitted Sample Ids`; the same submitted ID can therefore be represented once per matrix.
--   Randomized sequence generation is reproducible: it uses deterministic, independent seeds for each MS method, matrix, and batch combination.
--   Sequence CSVs use the SciexOS columns `Sample Name`, `MS Method`, `LC Method`, `Rack Type`, `Plate Type`, `Plate Position`, `Vial Position`, `Injection Volume`, `Sample Type`, and `Data File`.
--   `process_acquisition_ids()` and `process_acquisition_ids_reduced()` infer project details from the first `.xlsx` filename in the current working directory. Run them in a directory containing only the intended input workbook.
+- `generate_plate_meta_data()` uses 54 positions per plate, one blank per batch, one QC per matrix, and three plates per batch unless its parameters are changed.
+- Plate assignment deduplicates by `Matrix` and `Submitted Sample Ids`; the same submitted ID can therefore be represented once per matrix.
+- Randomized sequence generation is reproducible: it uses deterministic, independent seeds for each MS method, matrix, and batch combination.
+- Sequence CSVs use the SciexOS columns `Sample Name`, `MS Method`, `LC Method`, `Rack Type`, `Plate Type`, `Plate Position`, `Vial Position`, `Injection Volume`, `Sample Type`, and `Data File`.
+- `process_acquisition_ids()` and `process_acquisition_ids_reduced()` infer project details from the first `.xlsx` filename in the current working directory. Run them in a directory containing only the intended input workbook.
 
 ## Development
 

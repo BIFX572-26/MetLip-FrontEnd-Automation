@@ -1,6 +1,14 @@
+#' tas_accelerator_ui
+#' UI element for TAS eaccelerator tab
+#' 
+#' @param id NS session id
+#' 
+#' @return A shiny UI element
+#' @importFrom shiny NS
+#' @importFrom shinyjs hidden
 tas_accelerator_ui <- function(id) {
   ns <- shiny::NS(id)
-  tabItem(tabName = "acquired_tab",
+      tabItem(tabName = "acquired_tab",
               
               fluidRow(box(
                 title = "Technology Accessioning System (TAS) Search Request", width = 12,
@@ -58,20 +66,23 @@ tas_accelerator_ui <- function(id) {
       )
 }
 
-tas_accelerator_server <- function(id, tas_api) {
+#' tas_accelerator_server
+#' Server function for TAS eaccelerator tab
+#' 
+#' @param id NS session id
+#' @param app_state current app state
+#' @param tas_client TAS client connector
+#' 
+#' @importFrom readxl read_excel
+#' @importFrom shiny moduleServer reactiveValues updateTextInput
+tas_accelerator_server <- function(id, app_state, tas_client = MetLipAutomation::new_tas_client()) {
   shiny::moduleServer(id, function(input, output, session) {
     rv <- shiny::reactiveValues(
-      df_submitted = NULL,
-      df_generated = NULL,
-      df_confirmed = NULL,
-      request_id = NULL,
-      ms_methods = character(),
-      id_col = NULL,
-      confirm_bytes = NULL,
-      confirm_filename = NULL
+      df_submitted = NULL, df_generated = NULL, df_confirmed = NULL,
+      request_id = NULL, ms_methods = character(), id_col = NULL,
+      confirm_bytes = NULL, confirm_filename = NULL
     )
-
-# TAB 1: Acquired Samples
+  # TAB 1: Acquired Samples
   
   observeEvent(input$search_btn, {
     raw_id <- trimws(input$request_id_input)
@@ -81,7 +92,7 @@ tas_accelerator_server <- function(id, tas_api) {
     output$search_status <- renderUI(tags$p("Searching...", class = "status-msg"))
     
     res <- tryCatch(
-      tas_api$download(raw_id),
+      MetLipAutomation::tas_download_submitted_samples(tas_client, raw_id),
       error = function(e) {
         showNotification(paste("Cannot reach TAS:", e$message, "Call Ian"), type = "error"); NULL
       }
@@ -90,13 +101,13 @@ tas_accelerator_server <- function(id, tas_api) {
     
     if (res$status_code == 200) {
       temp_file <- tempfile(fileext = ".xlsx")
-      writeBin(content(res, "raw"), temp_file)
+      writeBin(httr::content(res, "raw"), temp_file)
       df <- tryCatch(readxl::read_excel(temp_file), error = function(e) {
         showNotification("Cannot read the file.", type = "error"); NULL
       })
       if (is.null(df)) { output$search_status <- renderUI(NULL); return() }
       
-      id_col <- tas_api$detect_sub_id_col(df)
+      id_col <- MetLipAutomation::detect_submitted_sample_id_column(df)
       if (is.na(id_col)) {
         showNotification("Cannot find Submitted Sample ID column.", type = "error")
         output$search_status <- renderUI(NULL); return()
@@ -110,10 +121,15 @@ tas_accelerator_server <- function(id, tas_api) {
       rv$id_col        <- id_col
       rv$confirm_bytes <- NULL
       rv$confirm_filename <- NULL
+      app_state$request_id <- raw_id
+      app_state$df_submitted <- df
+      app_state$df_generated <- NULL
+      app_state$df_confirmed <- NULL
+      app_state$submitted_id_col <- id_col
       
-      shinyjs::show(session$ns("ms_builder_section"))
-      shinyjs::show(session$ns("table_section"))
-      shinyjs::hide(session$ns("upload_section"))
+      shinyjs::show("ms_builder_section")
+      shinyjs::show("table_section")
+      shinyjs::hide("upload_section")
       output$search_status <- renderUI(
         tags$p(paste0(nrow(df), " submitted sample(s) loaded."),
                class = "status-msg success")
@@ -122,9 +138,9 @@ tas_accelerator_server <- function(id, tas_api) {
       
     } else {
       err <- tryCatch({
-        detail <- content(res, "text", encoding = "UTF-8")
+        detail <- httr::content(res, "text", encoding = "UTF-8")
         if (!is.null(detail) && nchar(detail) > 0)
-          paste0("HTTP ", res$status_code, " — ", detail)
+          paste0("HTTP ", res$status_code, " \u0336 ", detail)
         else paste("HTTP", res$status_code)
       }, error = function(e) paste("HTTP", res$status_code))
       output$search_status <- renderUI(
@@ -162,7 +178,7 @@ tas_accelerator_server <- function(id, tas_api) {
   observeEvent(input$clear_methods_btn, {
     rv$ms_methods   <- character()
     rv$df_generated <- NULL
-    shinyjs::hide(session$ns("upload_section"))
+    shinyjs::hide("upload_section")
   })
   
   output$ms_methods_ui <- renderUI({
@@ -172,7 +188,7 @@ tas_accelerator_server <- function(id, tas_api) {
       tags$span(class = "method-badge", methods[i],
                 tags$button(class = "remove-btn",
                             onclick = paste0("Shiny.setInputValue('", session$ns("remove_method"), "', ", i,
-                                             ", {priority: 'event'})"), "✕"))
+                                             ", {priority: 'event'})"), "\u2715"))
     })
   })
   
@@ -197,7 +213,7 @@ tas_accelerator_server <- function(id, tas_api) {
                    setdiff(colnames(expanded), "Acquired Sample Name"))
     rv$df_generated <- expanded %>% select(all_of(col_order))
     
-    shinyjs::show(session$ns("upload_section"))
+    shinyjs::show("upload_section")
     showNotification(
       paste0("Generated ", nrow(rv$df_generated), " acquired sample name(s)."),
       type = "message", duration = 4
@@ -206,39 +222,25 @@ tas_accelerator_server <- function(id, tas_api) {
   
   observeEvent(input$upload_btn, {
     req(rv$df_generated, rv$request_id)
-    shinyjs::disable(session$ns("upload_btn"))
+    shinyjs::disable("upload_btn")
     output$upload_status <- renderUI(tags$p("Uploading...", class = "status-msg"))
     
     df     <- rv$df_generated
     id_col <- rv$id_col
     
-    samples_json <- paste(
-      sapply(seq_len(nrow(df)), function(i) {
-        paste0(
-          '{"AcquiredSampleName":"', df[["Acquired Sample Name"]][i], '",',
-          '"SubmittedSampleIds":["', df[[id_col]][i], '"],',
-          '"Notes":"', ifelse(is.na(df[["Notes"]][i]), "", df[["Notes"]][i]), '"}'
-        )
-      }),
-      collapse = ","
-    )
-    upload_payload <- paste0(
-      '{"RequestDisplayId":"', rv$request_id, '",',
-      '"AcquiredSamples":[', samples_json, ']}'
-    )
     
     res <- tryCatch(
-      tas_api$upload(upload_payload),
+      MetLipAutomation::tas_upload_acquired_samples(tas_client, rv$request_id, df, id_col),
       error = function(e) {
         output$upload_status <- renderUI(
           tags$p(paste("TAS unreachable:", e$message, ". Call Ian"), class = "status-msg error"))
-        shinyjs::enable(session$ns("upload_btn")); NULL
+        shinyjs::enable("upload_btn"); NULL
       }
     )
     if (is.null(res)) return()
     
     if (res$status_code == 200) {
-      raw_bytes    <- content(res, "raw")
+      raw_bytes    <- httr::content(res, "raw")
       content_disp <- res$headers[["content-disposition"]]
       filename     <- regmatches(content_disp,
                                  regexpr('filename="([^"]+)"', content_disp))
@@ -248,6 +250,11 @@ tas_accelerator_server <- function(id, tas_api) {
       
       rv$confirm_bytes    <- raw_bytes
       rv$confirm_filename <- filename
+      app_state$df_confirmed <- NULL
+      app_state$request_id <- rv$request_id
+      app_state$df_submitted <- rv$df_submitted
+      app_state$df_generated <- rv$df_generated
+      app_state$submitted_id_col <- rv$id_col
       
       temp_file <- tempfile(fileext = ".xlsx")
       writeBin(raw_bytes, temp_file)
@@ -256,6 +263,7 @@ tas_accelerator_server <- function(id, tas_api) {
         colnames(df_confirmed)[colnames(df_confirmed) == "Acquired Sample ID (blank if new)"] <-
           "Acquired Sample ID"
         rv$df_confirmed <- df_confirmed
+        app_state$df_confirmed <- df_confirmed
       }
       output$upload_status <- renderUI(
         tags$p("TAS upload succesful, go to next dashboard tab",
@@ -263,16 +271,16 @@ tas_accelerator_server <- function(id, tas_api) {
       )
     } else {
       err <- tryCatch({
-        detail <- content(res, "text", encoding = "UTF-8")
+        detail <- httr::content(res, "text", encoding = "UTF-8")
         if (!is.null(detail) && nchar(detail) > 0)
-          paste0("HTTP ", res$status_code, " — ", detail)
+          paste0("HTTP ", res$status_code, " \u0336 ", detail)
         else paste("HTTP", res$status_code)
       }, error = function(e) paste("HTTP", res$status_code))
       output$upload_status <- renderUI(
-        tags$p(paste("❌ Upload failed:", err), class = "status-msg error")
+        tags$p(paste("\u2715 Upload failed:", err), class = "status-msg error")
       )
     }
-    shinyjs::enable(session$ns("upload_btn"))
+    shinyjs::enable("upload_btn")
   })
   
   output$download_btn <- downloadHandler(
@@ -285,10 +293,7 @@ tas_accelerator_server <- function(id, tas_api) {
       else write_xlsx(rv$df_generated, file)
     }
   )
+  
 
-    shiny::reactive(list(
-      df_confirmed = rv$df_confirmed,
-      request_id = rv$request_id
-    ))
   })
 }
