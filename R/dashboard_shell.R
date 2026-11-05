@@ -51,6 +51,7 @@ dashboard_ui <- function(tas_ui, sequence_ui, qc_upload_ui, qc_report_ui) {
     ),
     dashboardSidebar(
       sidebarMenu(
+        id = "qc_tab", # <--- ADD THIS ID HERE SO updateTabItems() CAN TARGET IT
         menuItem("TAS Accelerator", tabName = "acquired_tab", icon = icon("cogs")),
         menuItem("Sequence Generator", tabName = "plate_tab", icon = icon("th")),
         menuItem("QC Drift", tabName = "qc_tab", icon = icon("clipboard-check"),
