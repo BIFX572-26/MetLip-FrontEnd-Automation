@@ -158,7 +158,7 @@ Upload data to be corrected and will display the qc plots from qcdrift package a
 
 ## Phase 2 - Action Plan: MetLip Dashboard Client Requirements
 
-### Step 1: SciEx Data Ingestion & Auto-Transposition
+### 1: SciEx Data Ingestion & Auto-Transposition
 
 Peak area exports from SciEx mass specs occasionally have inverted axes. If row names begin with "MLA", the matrix is oriented incorrectly and needs to be transposed.
 
@@ -170,7 +170,7 @@ Implementation Strat:
 
 - Give users a visual notification in the UI (e.g., "Detected SciEx format – automatically transposed matrix based on 'MLA' row signature").
 
-### Step 2: Backward-Compatible Metadata Merging
+### 2: Backward-Compatible Metadata Merging
 
 Sample metadata has evolved across multiple versions, specifically regarding how injection order is structured and recorded. Historical dates determine which schema version to apply.
 
@@ -182,7 +182,7 @@ Implementation Strat:
 
 - Provide a preview table in the UI so users can verify that sample metadata successfully merged with the peak area data.
 
-### Step 3: Presence Filtering Module
+### 3: Presence Filtering Module
 
 Convert the client's custom R presence-filtering script into reactive Shiny logic:
 
@@ -198,7 +198,7 @@ Implementation Strat:
 
 - Apply the script's logic reactively so users can see how many features/metabolites are retained after presence filtering before moving to QC correction.
 
-### Step 4: Enhanced QC Correction (Adding Peredo Scale)
+### 4: Enhanced QC Correction (Adding Peredo Scale)
 
 The current pipeline uses standard z-scale normalization, but the client requires the option to use the Peredo scale alongside it.
 
@@ -210,7 +210,7 @@ Implementation Strat:
 
 - Wrap the Peredo scaling math into a helper function and pass it into the correction workflow.
 
-### Step 5: Flexible Long vs. Wide Format Export
+### 5: Flexible Long vs. Wide Format Export
 
 Users need the final corrected data exported in either a long or wide data frame format.
 
@@ -220,7 +220,7 @@ Implementation Strat:
 
 - Use `tidyr::pivot_longer()` or `tidyr::pivot_wider()` dynamically inside the download handler depending on what the user selects, ensuring exports match downstream pipeline expectations.
 
-### ONLY RECOMMENDED; UI/UX Layout Shift/checklist
+### RECOMMENDED; UI/UX Layout Shift/checklist
 
 To accommodate these new steps cleanly without cluttering the app, we can structure the QC Drift section into a clear 2-step workflow:
 
