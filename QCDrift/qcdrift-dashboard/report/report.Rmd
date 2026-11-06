@@ -1,0 +1,63 @@
+---
+title: "QCDrift - Quality Control Report"
+date: "`r format(Sys.time(), '%Y-%m-%d %H:%M')`"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    self_contained: true
+params:
+  meta: NULL
+  verdict: NULL
+  figs: NULL
+  review: NULL
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+## Verdict
+
+```{r, results='asis'}
+v <- params$verdict
+if (!is.null(v)) {
+  cat("**", v$title, "**\n\n", sep = "")
+  cat(v$headline, "\n\n")
+  if (nzchar(v$detail)) cat(v$detail, "\n\n")
+  cat("*CV limit used: ", v$thr, "%.*\n\n", sep = "")
+}
+```
+
+## Run summary
+
+```{r}
+knitr::kable(params$meta, col.names = c("Item", "Value"))
+```
+
+## Features to review
+
+```{r, results='asis'}
+if (is.null(params$review) || nrow(params$review) == 0) {
+  cat("No features were above the CV limit after correction.\n")
+} else {
+  cat("Top ", nrow(params$review), " features above the limit after correction ",
+      "(the full list is in the exported workbook).\n\n", sep = "")
+  print(knitr::kable(params$review, digits = 1, row.names = FALSE))
+}
+```
+
+## Diagnostic figures
+
+**How to read them:** tight clustering of QC samples in the corrected PCA,
+CV values below the limit, consistent violin medians after normalization, and
+the disappearance of vertical colour stripes in the heatmap all indicate that
+instrumental drift was successfully removed.
+
+```{r, results='asis'}
+for (nm in names(params$figs)) {
+  cat("\n\n### ", nm, "\n\n", sep = "")
+  cat(sprintf("![](%s)\n\n", params$figs[[nm]]))
+}
+```

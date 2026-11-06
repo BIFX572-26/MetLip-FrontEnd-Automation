@@ -23,7 +23,7 @@ library(qcdrift)        #QCdrift Package from Hood/QcDrift
 # UI
 ############################################################
 ui <- fluidPage(
-  titlePanel("Mass Spectrometry QC Dashboard"),
+  titlePanel("QCDrift Correction Dashboard"),
   sidebarLayout(
     sidebarPanel(
       fileInput("file_raw", "Upload Excel File", accept = ".xlsx"),
