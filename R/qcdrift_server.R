@@ -26,6 +26,22 @@ qcdrift_upload_server <- function(id) {
       )
     })
 
+# Popup preview of the uploaded file
+    observeEvent(input$file, {
+      preview <- readxl::read_excel(input$file$datapath, col_names = FALSE, n_max = 100)
+
+      output$preview_table <- DT::renderDT({
+        DT::datatable(preview, options = list(scrollX = TRUE))
+      })
+
+      showModal(modalDialog(
+        title = "File Preview",
+        DT::DTOutput(session$ns("preview_table")),
+        size = "l",
+        easyClose = TRUE
+      ))
+    })
+
     shiny::observeEvent(input$process, {
       req(input$file)
 
