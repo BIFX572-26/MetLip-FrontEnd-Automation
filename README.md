@@ -147,3 +147,83 @@ devtools::document()
 ```
 
 The project is distributed under the [MIT License](LICENSE.md).
+
+## Phase 1: QC Drift package
+
+new feature; runs qcdrift package as a new tab in dashboard, package is from: https://github.com/Hood-BIFX/qcdrift/tree/main by Jamilet, Dr J., and Dr.LaCroix.
+
+### QC Drift Tab
+
+Upload data to be corrected and will display the qc plots from qcdrift package and have a download button to download a full PDF QC Drift Report, uses existing framework/layouts
+
+## Phase 2 - Action Plan: MetLip Dashboard Client Requirements
+
+### Step 1: SciEx Data Ingestion & Auto-Transposition
+
+Peak area exports from SciEx mass specs occasionally have inverted axes. If row names begin with "MLA", the matrix is oriented incorrectly and needs to be transposed.
+
+Implementation Strat:
+
+- Add an auto-detection check immediately after reading the uploaded Excel file.
+
+- If `startsWith(rownames(data)\[1\], "MLA")` (or checking the first column/row labels), automatically apply `t()` or transpose the data frame before passing it downstream.
+
+- Give users a visual notification in the UI (e.g., "Detected SciEx format – automatically transposed matrix based on 'MLA' row signature").
+
+### Step 2: Backward-Compatible Metadata Merging
+
+Sample metadata has evolved across multiple versions, specifically regarding how injection order is structured and recorded. Historical dates determine which schema version to apply.
+
+Implementation Strat:
+
+- Create a metadata harmonization helper function that checks the date of the run or file headers.
+
+- Implement conditional logic (e.g., `if (run_date \< as.Date("YYYY-MM-DD")) { ... })` to map legacy column names and injection order rules to the modern schema format seamlessly.
+
+- Provide a preview table in the UI so users can verify that sample metadata successfully merged with the peak area data.
+
+### Step 3: Presence Filtering Module
+
+Convert the client's custom R presence-filtering script into reactive Shiny logic:
+
+1.  Notes Evaluation: Filter based on peak-picking notes, checking for `"y"`, `"Y"`, or `missing/NA` values.
+
+2.  Multiple Signals: Handle metabolites that generated multiple signals by filtering for the post-doc's manually chosen "best" signal.
+
+3.  General Regex: Update pattern-matching regular expressions to safely capture variant naming conventions across different lab runs.
+
+Implementation Strat:
+
+- Build a dedicated filtering step in the UI with adjustable parameters or toggle switches.
+
+- Apply the script's logic reactively so users can see how many features/metabolites are retained after presence filtering before moving to QC correction.
+
+### Step 4: Enhanced QC Correction (Adding Peredo Scale)
+
+The current pipeline uses standard z-scale normalization, but the client requires the option to use the Peredo scale alongside it.
+
+Implementation Strat:
+
+- Extend your normalization options in the backend.
+
+- Add a UI selector (e.g., a dropdown or radio buttons on the upload/processing screen allowing users to choose between Z-Scale and Peredo Scale for drift correction).
+
+- Wrap the Peredo scaling math into a helper function and pass it into the correction workflow.
+
+### Step 5: Flexible Long vs. Wide Format Export
+
+Users need the final corrected data exported in either a long or wide data frame format.
+
+Implementation Strat:
+
+- Add a format selection toggle `(shiny::radioButtons("export_format", "Format:", c("Wide", "Long")))` near the download button.
+
+- Use `tidyr::pivot_longer()` or `tidyr::pivot_wider()` dynamically inside the download handler depending on what the user selects, ensuring exports match downstream pipeline expectations.
+
+### ONLY RECOMMENDED; UI/UX Layout Shift/checklist
+
+To accommodate these new steps cleanly without cluttering the app, we can structure the QC Drift section into a clear 2-step workflow:
+
+1.  (Upload & Preprocess Tab): File upload, auto-transposition check, metadata version selection, presence filtering toggles, and scaling method choice (Z-Scale vs. Peredo Scale).
+
+2.  (Drift Report Tab): The 10 comparison plots and the custom PDF download button with format options.
