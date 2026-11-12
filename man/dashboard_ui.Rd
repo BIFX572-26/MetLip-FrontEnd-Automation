@@ -2,15 +2,22 @@
 % Please edit documentation in R/dashboard_shell.R
 \name{dashboard_ui}
 \alias{dashboard_ui}
-\title{dashboard_ui
-UI elements for the dashboard}
+\title{Dashboard UI}
 \usage{
-dashboard_ui()
+dashboard_ui(tas_ui, sequence_ui, qc_upload_ui, qc_report_ui)
+}
+\arguments{
+\item{tas_ui}{UI for the TAS Accelerator tab.}
+
+\item{sequence_ui}{UI for the Sequence Generator tab.}
+
+\item{qc_upload_ui}{UI for QC Drift data upload.}
+
+\item{qc_report_ui}{UI for QC Drift reports.}
 }
 \value{
-Shiny UI element
+A Shiny dashboard UI.
 }
 \description{
-dashboard_ui
-UI elements for the dashboard
+Dashboard UI
 }

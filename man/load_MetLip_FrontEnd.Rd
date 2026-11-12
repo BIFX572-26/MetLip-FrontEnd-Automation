@@ -2,12 +2,10 @@
 % Please edit documentation in R/load_MetLip_FrontEnd.R
 \name{load_MetLip_FrontEnd}
 \alias{load_MetLip_FrontEnd}
-\title{load_MetLip_FrontEnd.R
-Load the MetLip front end shiny dashboard}
+\title{Load the MetLip front end Shiny dashboard}
 \usage{
 load_MetLip_FrontEnd()
 }
 \description{
-load_MetLip_FrontEnd.R
-Load the MetLip front end shiny dashboard
+Load the MetLip front end Shiny dashboard
 }

@@ -75,7 +75,6 @@ importFrom(shiny,
   renderUI,
   req,
   selectInput,
-  shinyApp,
   showNotification,
   strong,
   tagList,
@@ -92,6 +91,7 @@ importFrom(shinydashboard,
   dashboardPage,
   dashboardSidebar,
   menuItem,
+  menuSubItem,
   sidebarMenu,
   tabItem,
   tabItems
@@ -100,10 +100,7 @@ importFrom(shinyjs,
   hidden,
   useShinyjs
 )
-importFrom(sortable,
-  enable_modules,
-  rank_list
-)
+importFrom(sortable,rank_list)
 importFrom(stats,
   runif,
   setNames
