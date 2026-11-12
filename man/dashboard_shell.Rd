@@ -2,15 +2,10 @@
 % Please edit documentation in R/dashboard_shell.R
 \name{dashboard_shell}
 \alias{dashboard_shell}
-\title{dashboard_shell
-Build the shared dashboard frame around the tab module UIs.}
+\title{Build the shared dashboard shell around the tab module UIs.}
 \usage{
 dashboard_shell()
 }
-\value{
-A 'shinydashboard::dashboardPage()' used for a Shiny app
-}
 \description{
-dashboard_shell
-Build the shared dashboard frame around the tab module UIs.
+Build the shared dashboard shell around the tab module UIs.
 }
