@@ -1,6 +1,4 @@
-#' dashboard_shell
-#' Build the shared dashboard frame around the tab module UIs.
-#' @return A 'shinydashboard::dashboardPage()' used for a Shiny app
+#' Build the shared dashboard shell around the tab module UIs.
 #' 
 #' @importFrom shiny HTML tags
 dashboard_shell <- function() {
@@ -29,35 +27,58 @@ dashboard_shell <- function() {
   "))
 }
 
-#' dashboard_ui
-#' UI elements for the dashboard
-#' 
-#' @return Shiny UI element
-#' @importFrom shiny icon
-#' @importFrom shinydashboard dashboardBody dashboardHeader dashboardPage dashboardSidebar menuItem sidebarMenu tabItems
+#' Dashboard UI
+#'
+#' @param tas_ui UI for the TAS Accelerator tab.
+#' @param sequence_ui UI for the Sequence Generator tab.
+#' @param qc_upload_ui UI for QC Drift data upload.
+#' @param qc_report_ui UI for QC Drift reports.
+#'
+#' @return A Shiny dashboard UI.
+#' @importFrom shiny icon tabItem
+#' @importFrom shinydashboard dashboardBody dashboardHeader dashboardPage dashboardSidebar menuItem menuSubItem sidebarMenu tabItems
 #' @importFrom shinyjs useShinyjs
-dashboard_ui <- function() {
-  dashboardPage(
-  dashboardHeader(
-    title = tags$span(
-      tags$img(src = "https://raw.githubusercontent.com/IDSS-NIAID/MetLip-FrontEnd-Automation/refs/heads/main/assets/logo.png", height = "50px",
-               style = "margin-right: 10px; vertical-align: left;"),
-      "Comp Tools for Mass Spec"
+dashboard_ui <- function(tas_ui, sequence_ui, qc_upload_ui, qc_report_ui) {
+  shinydashboard::dashboardPage(
+    shinydashboard::dashboardHeader(
+      title = shiny::tags$span(
+        shiny::tags$img(
+          src = "https://raw.githubusercontent.com/IDSS-NIAID/MetLip-FrontEnd-Automation/refs/heads/main/assets/logo.png",
+          height = "50px",
+          style = "margin-right: 10px; vertical-align: middle;"
+        ),
+        "Comp Tools for Mass Spec"
+      ),
+      titleWidth = 400
     ),
-    titleWidth = 400
-  ),
-  dashboardSidebar(
-    sidebarMenu(
-      menuItem("TAS Accelerator", tabName = "acquired_tab", icon = icon("cogs")),
-      menuItem("Sequence Generator", tabName = "plate_tab", icon = icon("th"))
-    )
-  ),
-  dashboardBody(
-    useShinyjs(),
-    dashboard_shell(),
-    tabItems(
-      tas_accelerator_ui("tas_accelerator"),
-      sequence_generator_ui("sequence_generator")
+
+    shinydashboard::dashboardSidebar(
+      shinydashboard::sidebarMenu(id = "main_tabs",
+        shinydashboard::menuItem("TAS Accelerator",
+          tabName = "acquired_tab", icon = shiny::icon("cogs")
+        ),
+
+        shinydashboard::menuItem("Sequence Generator",
+          tabName = "plate_tab", icon = shiny::icon("th")
+        ),
+
+        shinydashboard::menuItem("QC Drift",
+          icon = shiny::icon("clipboard-check"),
+
+          shinydashboard::menuSubItem("Drift Upload",
+            tabName = "qc_upload", icon = shiny::icon("upload")
+          ),
+
+          shinydashboard::menuSubItem("Drift Report",
+            tabName = "qc_report", icon = shiny::icon("chart-bar")
+          )
+        )
+      )
+    ),
+
+    shinydashboard::dashboardBody(shinyjs::useShinyjs(),
+      dashboard_shell(),
+      shinydashboard::tabItems(tas_ui, sequence_ui, qc_upload_ui, qc_report_ui)
     )
   )
-)}
+}
