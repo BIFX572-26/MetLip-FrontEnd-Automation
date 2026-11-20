@@ -5,6 +5,7 @@
 load_MetLip_FrontEnd <- function() {
   # Enable modules, constuct dashboard UI's
   sortable::enable_modules()
+  qcd_setup_async()
   ui <- dashboard_ui(
     tas_ui = tas_accelerator_ui(
       "tas_accelerator"
@@ -15,11 +16,11 @@ load_MetLip_FrontEnd <- function() {
     ),
 
     qc_upload_ui = qcdrift_upload_ui(
-      "qc_upload"
+      "qcdrift_upload"
     ),
 
     qc_report_ui = qcdrift_report_ui(
-      "qc_report"
+      "qcdrift_report"
     )
   )
 
@@ -47,13 +48,13 @@ load_MetLip_FrontEnd <- function() {
 
     # QC Drift Upload
     qc_results <- qcdrift_upload_server(
-      "qc_upload",
+      "qcdrift_upload",
       parent_session = session
     )
 
     # QC Drift Report
     qcdrift_report_server(
-      "qc_report",
+      "qcdrift_report",
       qc_results
     )
   }

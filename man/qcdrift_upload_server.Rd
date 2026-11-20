@@ -4,10 +4,12 @@
 \alias{qcdrift_upload_server}
 \title{QC Drift Upload Server}
 \usage{
-qcdrift_upload_server(id, parent_session)
+qcdrift_upload_server(id, parent_session = NULL)
 }
 \arguments{
 \item{id}{Shiny module session ID.}
+
+\item{parent_session}{The host app session, used to switch sidebar tabs.}
 }
 \value{
 A reactive expression containing QC processing results.

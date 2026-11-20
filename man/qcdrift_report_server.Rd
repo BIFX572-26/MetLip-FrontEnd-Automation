@@ -9,7 +9,8 @@ qcdrift_report_server(id, qc_results_reactive)
 \arguments{
 \item{id}{Shiny module session ID.}
 
-\item{qc_results_reactive}{Reactive expression containing QC processing results.}
+\item{qc_results_reactive}{Reactive expression containing QC processing results
+(the value returned by \code{qcdrift_upload_server()}).}
 }
 \value{
 A Shiny module server result.

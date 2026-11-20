@@ -2,8 +2,7 @@
 % Please edit documentation in R/qcdrift_module.R
 \name{qcdrift_upload_ui}
 \alias{qcdrift_upload_ui}
-\title{qcdrift_module.R, updated w/ui elements and server calls
-QC Drift Upload UI}
+\title{QC Drift Upload UI}
 \usage{
 qcdrift_upload_ui(id)
 }
@@ -14,6 +13,5 @@ qcdrift_upload_ui(id)
 A Shiny tabItem UI.
 }
 \description{
-qcdrift_module.R, updated w/ui elements and server calls
 QC Drift Upload UI
 }
