@@ -35,7 +35,7 @@ dashboard_shell <- function() {
 #' @param qc_report_ui UI for QC Drift reports.
 #'
 #' @return A Shiny dashboard UI.
-#' @importFrom shiny icon tabItem
+#' @importFrom shiny icon tags
 #' @importFrom shinydashboard dashboardBody dashboardHeader dashboardPage dashboardSidebar menuItem menuSubItem sidebarMenu tabItems
 #' @importFrom shinyjs useShinyjs
 dashboard_ui <- function(tas_ui, sequence_ui, qc_upload_ui, qc_report_ui) {
@@ -63,14 +63,14 @@ dashboard_ui <- function(tas_ui, sequence_ui, qc_upload_ui, qc_report_ui) {
         ),
 
         shinydashboard::menuItem("QC Drift",
-          icon = shiny::icon("clipboard-check"),
+          icon = shiny::icon("chart-line"),
 
-          shinydashboard::menuSubItem("Drift Upload",
+          shinydashboard::menuSubItem("Data Upload",
             tabName = "qc_upload", icon = shiny::icon("upload")
           ),
 
           shinydashboard::menuSubItem("Drift Report",
-            tabName = "qc_report", icon = shiny::icon("chart-bar")
+            tabName = "qc_report", icon = shiny::icon("file-alt")
           )
         )
       )
@@ -78,6 +78,7 @@ dashboard_ui <- function(tas_ui, sequence_ui, qc_upload_ui, qc_report_ui) {
 
     shinydashboard::dashboardBody(shinyjs::useShinyjs(),
       dashboard_shell(),
+      qcd_css_tag(),
       shinydashboard::tabItems(tas_ui, sequence_ui, qc_upload_ui, qc_report_ui)
     )
   )

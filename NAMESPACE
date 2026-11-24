@@ -15,6 +15,7 @@ export(process_plate_data)
 export(tas_download_submitted_samples)
 export(tas_upload_acquired_samples)
 export(vectorize_input)
+import(shiny)
 importFrom(DT,
   DTOutput,
   datatable,
@@ -45,8 +46,35 @@ importFrom(dplyr,
   tibble,
   ungroup
 )
+importFrom(ggplot2,
+  aes,
+  coord_cartesian,
+  element_blank,
+  element_text,
+  facet_wrap,
+  geom_line,
+  geom_point,
+  geom_tile,
+  geom_vline,
+  ggplot,
+  ggsave,
+  labs,
+  scale_colour_manual,
+  scale_fill_gradient2,
+  scale_shape_manual,
+  scale_x_discrete,
+  scale_y_log10,
+  theme,
+  theme_minimal
+)
 importFrom(lubridate,year)
 importFrom(magrittr,"%>%")
+importFrom(plotly,
+  ggplotly,
+  layout,
+  plotlyOutput,
+  renderPlotly
+)
 importFrom(purrr,map)
 importFrom(readxl,read_excel)
 importFrom(rlang,.data)
@@ -84,6 +112,7 @@ importFrom(shiny,
   updateSelectInput,
   updateTextInput
 )
+importFrom(shinycssloaders,withSpinner)
 importFrom(shinydashboard,
   box,
   dashboardBody,
